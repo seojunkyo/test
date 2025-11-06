@@ -302,29 +302,7 @@ export default function AIAssistantUI() {
 
   const composerRef = useRef(null)
 
-  const selected = conversations.find((c) => c.id === selectedId) || null
-
-  const handleLogin = () => {
-    setIsLoggedIn(true)
-    localStorage.setItem("isLoggedIn", "true")
-    setShowLoginModal(false)
-    setUserData({
-      username: "ttt",
-      mail: "ddd@sd.com",
-    })
-    if (conversations.length === 0) {
-      createNewChat()
-    }
-  }
-
-  const handleLogout = () => {
-    setIsLoggedIn(false)
-    localStorage.removeItem("isLoggedIn")
-    setUserData({
-      username: "",
-      mail: "",
-    })
-  }
+  const selected = conversations.find((c) => c.id === selectedId) || nul
 
   if (!isLoggedIn && showLoginModal) {
     return (
