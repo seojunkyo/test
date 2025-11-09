@@ -76,6 +76,13 @@ export default function AIAssistantUI() {
     setHasInitialized(true) // Mark as initialized
   }, [])
 
+  const apiUrl = process.env.NEXT_PUBLIC_BACKEND_API_URL
+
+  const onLogin = () => {
+    localStorage.setItem("isLoggedIn", true);
+    window.location.href= = `${apiUrl}/sso`
+  };
+
   useEffect(() => {
     if (!isClient) return
 
@@ -330,14 +337,14 @@ export default function AIAssistantUI() {
   if (!isLoggedIn && showLoginModal) {
     return (
       <div className="h-screen w-full bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
-        <LoginModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} onLogin={handleLogin} />
+        <LoginModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} onLogin={onLogin} />
       </div>
     )
   }
 
   return (
     <div className="h-screen w-full bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
-      <LoginModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} onLogin={handleLogin} />
+      <LoginModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} />
 
       <SearchModal
         isOpen={showSearchModal}
@@ -403,8 +410,6 @@ export default function AIAssistantUI() {
             createNewChat={createNewChat}
             sidebarCollapsed={sidebarCollapsed}
             setSidebarOpen={setSidebarOpen}
-            isLoggedIn={isLoggedIn}
-            onLogout={handleLogout}
           />
           <ChatPane
             ref={composerRef}
