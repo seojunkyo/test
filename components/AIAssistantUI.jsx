@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useMemo, useRef, useState } from "react"
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Calendar, LayoutGrid, MoreHorizontal } from "lucide-react"
 import Sidebar from "./Sidebar"
 import Header from "./Header"
@@ -21,12 +21,35 @@ export default function AIAssistantUI() {
   const [isLoggedIn, setIsLoggedIn] = useState(false) // Added login state management
   const [hasInitialized, setHasInitialized] = useState(false) // Added initialization flag to prevent duplicate chat creation
   const [showSearchModal, setShowSearchModal] = useState(false)
+  const loginProcessed = useRef(false)
 
-  const [userData, setUserData] = useState({
-    username: "",
-    mail: "",
-  })
+  const searchParams = useSearchParams();
+  const router = useRouter();
 
+  const user = searchParams.get("username")
+  const mail = searchParams.get("mail")
+  const loginid = searchParams.get("loginid")
+  const deptnmae = searchParams.get("intname")  
+
+  useEffect(() => {
+    if(user && !loginProcessed.current) {
+      const userData = {
+        username: user,
+        mail: mail,
+        loginid: loginid,
+        deptnmae: deptname,
+      }
+      try{
+        login(userData);
+        loginProcessed.current = true;
+
+        router.replace('/');
+      } catch(error) {
+          console.log(error);
+      }
+    }
+  }, [searchParams, router,login])
+  
   useEffect(() => {
     setIsClient(true)
     const saved = localStorage.getItem("theme")
