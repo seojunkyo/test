@@ -80,7 +80,7 @@ export default function AIAssistantUI() {
 
   const onLogin = () => {
     localStorage.setItem("isLoggedIn", true);
-    window.location.href= = `${apiUrl}/sso`
+    window.location.href = `${apiUrl}/sso`
   };
 
   useEffect(() => {
