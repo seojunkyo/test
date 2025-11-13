@@ -110,10 +110,22 @@ const ChatPane = forwardRef(function ChatPane(
     setThinkingConvId?.(currentConv.id)
 
     const now = new Date().toISOString()
+    const userMsg = {
+      id: generateStableId("msg_"),
+      role:"user",
+      content: message,
+      createdAt: now,
+    }
+
+    const aiMsg = {
+      id: generateStableId("msg_"),
+      role:"assistant",
+      content: "",
+      streaming: true,
+    };
 
     let updatedConv = currentConv
     if (!isResend) {
-      const userMsg = { id: generateStableId("msg_"), role: "user", content: message, createdAt: now }
       updatedConv = {
         ...currentConv,
         messages: [...(currentConv.messages || []), userMsg],
@@ -124,16 +136,20 @@ const ChatPane = forwardRef(function ChatPane(
       onUpdateConversation?.(updatedConv)
     }
 
+    const payload = {
+      messages: updateConv.messages.map((m) => ({
+        role: m.role,
+        content: m.content,
+      })),
+    }
+
     try {
       const response = await fetch("https://localhost:3000/ask", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          message: message,
-          timestamp: new Date().toISOString(),
-        }),
+        body: JSON.stringify(payload),
       })
 
       if (response.ok) {
@@ -143,11 +159,11 @@ const ChatPane = forwardRef(function ChatPane(
         setIsThinking?.(false)
         setThinkingConvId?.(null)
 
-        if (result && result.response) {
+        if (result && result.reply) {
           const asstMsg = {
             id: generateStableId("msg_"),
             role: "assistant",
-            content: result.response,
+            content: result.reply,
             createdAt: new Date().toISOString(),
           }
 
