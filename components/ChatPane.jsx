@@ -45,25 +45,9 @@ const ChatPane = forwardRef(function ChatPane(
   const [editingId, setEditingId] = useState(null)
   const [draft, setDraft] = useState("")
   const [busy, setBusy] = useState(false)
-  const [editingTitle, setEditingTitle] = useState(false)
-  const [titleDraft, setTitleDraft] = useState("")
   const composerRef = useRef(null)
-  const titleEditRef = useRef(null)
   const scrollContainerRef = useRef(null)
   const messagesEndRef = useRef(null)
-
-  useEffect(() => {
-    function handleClickOutside(event) {
-      if (titleEditRef.current && !titleEditRef.current.contains(event.target) && editingTitle) {
-        saveTitleEdit()
-      }
-    }
-
-    if (editingTitle) {
-      document.addEventListener("mousedown", handleClickOutside)
-      return () => document.removeEventListener("mousedown", handleClickOutside)
-    }
-  }, [editingTitle, titleDraft])
 
   useEffect(() => {
     if (messagesEndRef.current) {
@@ -110,22 +94,10 @@ const ChatPane = forwardRef(function ChatPane(
     setThinkingConvId?.(currentConv.id)
 
     const now = new Date().toISOString()
-    const userMsg = {
-      id: generateStableId("msg_"),
-      role:"user",
-      content: message,
-      createdAt: now,
-    }
-
-    const aiMsg = {
-      id: generateStableId("msg_"),
-      role:"assistant",
-      content: "",
-      streaming: true,
-    };
 
     let updatedConv = currentConv
     if (!isResend) {
+      const userMsg = { id: generateStableId("msg_"), role: "user", content: message, createdAt: now }
       updatedConv = {
         ...currentConv,
         messages: [...(currentConv.messages || []), userMsg],
@@ -136,20 +108,16 @@ const ChatPane = forwardRef(function ChatPane(
       onUpdateConversation?.(updatedConv)
     }
 
-    const payload = {
-      messages: updateConv.messages.map((m) => ({
-        role: m.role,
-        content: m.content,
-      })),
-    }
-
     try {
       const response = await fetch("https://localhost:3000/ask", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          message: message,
+          timestamp: new Date().toISOString(),
+        }),
       })
 
       if (response.ok) {
@@ -159,11 +127,11 @@ const ChatPane = forwardRef(function ChatPane(
         setIsThinking?.(false)
         setThinkingConvId?.(null)
 
-        if (result && result.reply) {
+        if (result && result.response) {
           const asstMsg = {
             id: generateStableId("msg_"),
             role: "assistant",
-            content: result.reply,
+            content: result.response,
             createdAt: new Date().toISOString(),
           }
 
@@ -260,58 +228,9 @@ const ChatPane = forwardRef(function ChatPane(
     cancelEdit()
   }
 
-  function startTitleEdit() {
-    setEditingTitle(true)
-    setTitleDraft(conversation?.title || "New Chat")
-  }
-
-  function saveTitleEdit() {
-    if (titleDraft.trim() && onUpdateTitle) {
-      onUpdateTitle(titleDraft.trim())
-    }
-    setEditingTitle(false)
-    setTitleDraft("")
-  }
-
-  function cancelTitleEdit() {
-    setEditingTitle(false)
-    setTitleDraft("")
-  }
-
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col">
       <div ref={scrollContainerRef} className="flex-1 space-y-5 overflow-y-auto px-4 py-6 sm:px-8">
-        <div className="mb-2 text-3xl font-serif tracking-tight sm:text-4xl md:text-5xl">
-          {editingTitle ? (
-            <div ref={titleEditRef} className="flex items-center gap-2">
-              <input
-                type="text"
-                value={titleDraft}
-                onChange={(e) => setTitleDraft(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") saveTitleEdit()
-                  if (e.key === "Escape") cancelTitleEdit()
-                }}
-                className="flex-1 bg-transparent border-b border-zinc-300 dark:border-zinc-700 outline-none text-2xl font-sans"
-                autoFocus
-              />
-              <button onClick={saveTitleEdit} className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded">
-                <Check className="h-4 w-4" />
-              </button>
-              <button onClick={cancelTitleEdit} className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded">
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-          ) : (
-            <span
-              className="inline-block leading-[1.05] font-sans text-2xl hover:bg-zinc-100 dark:hover:bg-zinc-800 px-2 py-1 rounded cursor-pointer transition-colors"
-              onClick={startTitleEdit}
-              title="Click to edit title"
-            >
-              {conversation?.title || "New Chat"}
-            </span>
-          )}
-        </div>
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center min-h-[400px] space-y-6">
             <div className="text-center space-y-2">

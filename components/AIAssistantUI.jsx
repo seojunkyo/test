@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import React, { useEffect, useMemo, useRef, useState } from "react"
 import { Calendar, LayoutGrid, MoreHorizontal } from "lucide-react"
 import Sidebar from "./Sidebar"
 import Header from "./Header"
@@ -21,35 +21,12 @@ export default function AIAssistantUI() {
   const [isLoggedIn, setIsLoggedIn] = useState(false) // Added login state management
   const [hasInitialized, setHasInitialized] = useState(false) // Added initialization flag to prevent duplicate chat creation
   const [showSearchModal, setShowSearchModal] = useState(false)
-  const loginProcessed = useRef(false)
 
-  const searchParams = useSearchParams();
-  const router = useRouter();
+  const [userData, setUserData] = useState({
+    username: "",
+    mail: "",
+  })
 
-  const user = searchParams.get("username")
-  const mail = searchParams.get("mail")
-  const loginid = searchParams.get("loginid")
-  const deptnmae = searchParams.get("intname")  
-
-  useEffect(() => {
-    if(user && !loginProcessed.current) {
-      const userData = {
-        username: user,
-        mail: mail,
-        loginid: loginid,
-        deptnmae: deptname,
-      }
-      try{
-        login(userData);
-        loginProcessed.current = true;
-
-        router.replace('/');
-      } catch(error) {
-          console.log(error);
-      }
-    }
-  }, [searchParams, router,login])
-  
   useEffect(() => {
     setIsClient(true)
     const saved = localStorage.getItem("theme")
@@ -75,13 +52,6 @@ export default function AIAssistantUI() {
 
     setHasInitialized(true) // Mark as initialized
   }, [])
-
-  const apiUrl = process.env.NEXT_PUBLIC_BACKEND_API_URL
-
-  const onLogin = () => {
-    localStorage.setItem("isLoggedIn", true);
-    window.location.href = `${apiUrl}/sso`
-  };
 
   useEffect(() => {
     if (!isClient) return
@@ -216,6 +186,24 @@ export default function AIAssistantUI() {
     setConversations((prev) => prev.map((c) => (c.id === id ? { ...c, pinned: !c.pinned } : c)))
   }
 
+  function renameConversation(id, newTitle) {
+    setConversations((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, title: newTitle, updatedAt: new Date().toISOString() } : c)),
+    )
+  }
+
+  function deleteConversation(id) {
+    setConversations((prev) => prev.filter((c) => c.id !== id))
+    if (selectedId === id) {
+      const remaining = conversations.filter((c) => c.id !== id)
+      if (remaining.length > 0) {
+        setSelectedId(remaining[0].id)
+      } else {
+        setSelectedId(null)
+      }
+    }
+  }
+
   function createNewChat() {
     const id = generateStableId("chat_")
     const item = {
@@ -332,19 +320,41 @@ export default function AIAssistantUI() {
 
   const composerRef = useRef(null)
 
-  const selected = conversations.find((c) => c.id === selectedId) || nul
+  const selected = conversations.find((c) => c.id === selectedId) || null
+
+  const handleLogin = () => {
+    setIsLoggedIn(true)
+    localStorage.setItem("isLoggedIn", "true")
+    setShowLoginModal(false)
+    setUserData({
+      username: "ttt",
+      mail: "ddd@sd.com",
+    })
+    if (conversations.length === 0) {
+      createNewChat()
+    }
+  }
+
+  const handleLogout = () => {
+    setIsLoggedIn(false)
+    localStorage.removeItem("isLoggedIn")
+    setUserData({
+      username: "",
+      mail: "",
+    })
+  }
 
   if (!isLoggedIn && showLoginModal) {
     return (
       <div className="h-screen w-full bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
-        <LoginModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} onLogin={onLogin} />
+        <LoginModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} onLogin={handleLogin} />
       </div>
     )
   }
 
   return (
     <div className="h-screen w-full bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
-      <LoginModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} />
+      <LoginModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} onLogin={handleLogin} />
 
       <SearchModal
         isOpen={showSearchModal}
@@ -393,6 +403,8 @@ export default function AIAssistantUI() {
           selectedId={selectedId}
           onSelect={(id) => setSelectedId(id)}
           togglePin={togglePin}
+          onRenameConversation={renameConversation}
+          onDeleteConversation={deleteConversation}
           query={query}
           setQuery={setQuery}
           searchRef={searchRef}
@@ -410,6 +422,8 @@ export default function AIAssistantUI() {
             createNewChat={createNewChat}
             sidebarCollapsed={sidebarCollapsed}
             setSidebarOpen={setSidebarOpen}
+            isLoggedIn={isLoggedIn}
+            onLogout={handleLogout}
           />
           <ChatPane
             ref={composerRef}

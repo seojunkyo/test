@@ -38,6 +38,8 @@ export default function Sidebar({
   selectedId,
   onSelect,
   togglePin,
+  onRenameConversation,
+  onDeleteConversation,
   query,
   setQuery,
   searchRef,
@@ -286,6 +288,8 @@ export default function Sidebar({
                       active={c.id === selectedId}
                       onSelect={() => onSelect(c.id)}
                       onTogglePin={() => togglePin(c.id)}
+                      onRename={onRenameConversation}
+                      onDelete={onDeleteConversation}
                     />
                   ))
                 )}
@@ -309,6 +313,8 @@ export default function Sidebar({
                       active={c.id === selectedId}
                       onSelect={() => onSelect(c.id)}
                       onTogglePin={() => togglePin(c.id)}
+                      onRename={onRenameConversation}
+                      onDelete={onDeleteConversation}
                       showMeta
                     />
                   ))
