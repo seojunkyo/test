@@ -56,6 +56,7 @@ export default function Sidebar({
   showSearchModal = false,
   setShowSearchModal = () => {},
   onResetToHome = () => {}, // Added onResetToHome prop
+  isNewChatDisabled = false, // Added prop to control Start New Chat button state
 }) {
   const [showCreateFolderModal, setShowCreateFolderModal] = useState(false)
   const [showCreateTemplateModal, setShowCreateTemplateModal] = useState(false)
@@ -148,8 +149,12 @@ export default function Sidebar({
         <div className="flex flex-col items-center gap-4 pt-4">
           <button
             onClick={createNewChat}
-            className="rounded-xl p-2 hover:bg-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:hover:bg-zinc-800"
-            title="New Chat"
+            disabled={isNewChatDisabled}
+            className={cls(
+              "rounded-xl p-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500",
+              isNewChatDisabled ? "cursor-not-allowed opacity-50" : "hover:bg-zinc-100 dark:hover:bg-zinc-800",
+            )}
+            title={isNewChatDisabled ? "Already in a new chat" : "New Chat"}
           >
             <Plus className="h-5 w-5" />
           </button>
@@ -262,8 +267,14 @@ export default function Sidebar({
             <div className="px-3 pt-3">
               <button
                 onClick={createNewChat}
-                className="flex w-full items-center justify-center gap-2 rounded-full bg-zinc-900 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:bg-white dark:text-zinc-900"
-                title="New Chat (⌘N)"
+                disabled={isNewChatDisabled}
+                className={cls(
+                  "flex w-full items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-medium shadow-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500",
+                  isNewChatDisabled
+                    ? "cursor-not-allowed bg-zinc-300 text-zinc-500 dark:bg-zinc-700 dark:text-zinc-400"
+                    : "bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-900",
+                )}
+                title={isNewChatDisabled ? "Already in a new chat" : "New Chat (⌘N)"}
               >
                 <Plus className="h-4 w-4" /> Start New Chat
               </button>
