@@ -27,8 +27,6 @@ export default function AIAssistantUI() {
     mail: "",
   })
 
-  const [pendingConversation, setPendingConversation] = useState(null)
-
   useEffect(() => {
     setIsClient(true)
     const saved = localStorage.getItem("theme")
@@ -160,10 +158,10 @@ export default function AIAssistantUI() {
   useEffect(() => {
     if (!hasInitialized || !isLoggedIn) return // Don't create chat if not initialized or not logged in
 
-    if (!selectedId && conversations.length === 0 && !pendingConversation) {
+    if (!selectedId && conversations.length === 0) {
       createNewChat()
     }
-  }, [hasInitialized, isLoggedIn, selectedId, conversations.length, pendingConversation])
+  }, [hasInitialized, isLoggedIn, selectedId, conversations.length])
 
   const filtered = useMemo(() => {
     if (!query.trim()) return conversations
@@ -216,18 +214,38 @@ export default function AIAssistantUI() {
       preview: "Say hello to start...",
       pinned: false,
       folder: "Work Projects",
-      messages: [],
+      messages: [], // Ensure messages array is empty for new chats
     }
-
-    // Set as pending conversation instead of adding to list
-    setPendingConversation(item)
+    setConversations((prev) => [item, ...prev])
     setSelectedId(id)
     setSidebarOpen(false)
   }
 
   function resetToHome() {
-    createNewChat()
+    if (selectedId) {
+      // Clear messages of current conversation without creating a new one
+      setConversations((prev) =>
+        prev.map((c) =>
+          c.id === selectedId
+            ? {
+                ...c,
+                messages: [],
+                messageCount: 0,
+                preview: "Say hello to start...",
+                updatedAt: new Date().toISOString(),
+              }
+            : c,
+        ),
+      )
+    }
     setSidebarOpen(false)
+  }
+
+  function createFolder() {
+    const name = prompt("Folder name")
+    if (!name) return
+    if (folders.some((f) => f.name.toLowerCase() === name.toLowerCase())) return alert("Folder already exists.")
+    setFolders((prev) => [...prev, { id: generateStableId("folder_"), name }])
   }
 
   function editMessage(convId, messageId, newContent) {
@@ -302,9 +320,7 @@ export default function AIAssistantUI() {
 
   const composerRef = useRef(null)
 
-  const selected =
-    conversations.find((c) => c.id === selectedId) ||
-    (pendingConversation?.id === selectedId ? pendingConversation : null)
+  const selected = conversations.find((c) => c.id === selectedId) || null
 
   const handleLogin = () => {
     setIsLoggedIn(true)
@@ -327,18 +343,6 @@ export default function AIAssistantUI() {
       mail: "",
     })
   }
-
-  const isNewChatDisabled = useMemo(() => {
-    // If there's a pending conversation (not yet in the list), disable the button
-    if (pendingConversation) {
-      return true
-    }
-    // If selected conversation is not in the conversations list, disable the button
-    if (selectedId && !conversations.find((c) => c.id === selectedId)) {
-      return true
-    }
-    return false
-  }, [pendingConversation, selectedId, conversations])
 
   if (!isLoggedIn && showLoginModal) {
     return (
@@ -411,7 +415,6 @@ export default function AIAssistantUI() {
           showSearchModal={showSearchModal}
           setShowSearchModal={setShowSearchModal}
           onResetToHome={resetToHome} // Pass resetToHome handler to Sidebar
-          isNewChatDisabled={isNewChatDisabled} // Pass isNewChatDisabled prop to Sidebar
         />
 
         <main className="relative flex min-w-0 flex-1 flex-col">
@@ -426,14 +429,7 @@ export default function AIAssistantUI() {
             ref={composerRef}
             conversation={selected}
             onUpdateConversation={(updatedConv) => {
-              if (pendingConversation && pendingConversation.id === updatedConv.id && updatedConv.messages.length > 0) {
-                // First message sent - add to conversations list
-                setConversations((prev) => [updatedConv, ...prev])
-                setPendingConversation(null)
-              } else {
-                // Update existing conversation
-                setConversations((prev) => prev.map((c) => (c.id === updatedConv.id ? updatedConv : c)))
-              }
+              setConversations((prev) => prev.map((c) => (c.id === updatedConv.id ? updatedConv : c)))
             }}
             onEditMessage={(messageId, newContent) => selected && editMessage(selected.id, messageId, newContent)}
             onResendMessage={(messageId, newContent) => selected && resendMessage(selected.id, messageId, newContent)}
