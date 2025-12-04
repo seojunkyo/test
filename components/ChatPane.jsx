@@ -94,10 +94,22 @@ const ChatPane = forwardRef(function ChatPane(
     setThinkingConvId?.(currentConv.id)
 
     const now = new Date().toISOString()
+    const userMsg = {
+      id: generateStableId("msg_"),
+      role: "user",
+      content: message,
+      createdAt: now,
+    };
+    
+    const aiMsg = {
+      id: generateStableId("msg_"),
+      role: "assistant",
+      content: "",
+      streaming: true,
+    };
 
     let updatedConv = currentConv
     if (!isResend) {
-      const userMsg = { id: generateStableId("msg_"), role: "user", content: message, createdAt: now }
       updatedConv = {
         ...currentConv,
         messages: [...(currentConv.messages || []), userMsg],
@@ -108,30 +120,44 @@ const ChatPane = forwardRef(function ChatPane(
       onUpdateConversation?.(updatedConv)
     }
 
+    const payload = {
+      model_name: selectedBot,
+      messages:(()=>{
+        const lastMessage = updatedConv.messages[updatedConv.messages.length -1];
+        return lastMessage
+        ? {
+          role: lastMessage.role,
+          content: lastMessage.content,
+        }
+        : {
+          role: "user",
+          content: "",
+        };
+      })(),
+      thread_id: `${userId}:${updatedConv.id}`,
+    };
+
     try {
       const response = await fetch("https://localhost:3000/ask", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          message: message,
-          timestamp: new Date().toISOString(),
-        }),
+        body: JSON.stringify(payload),
       })
 
       if (response.ok) {
+        setIsThinking?.(false)
+        setThinkingConvId?.(null)
+        
         const result = await response.json()
         console.log("[v0] API response:", result)
 
-        setIsThinking?.(false)
-        setThinkingConvId?.(null)
-
-        if (result && result.response) {
+        if (result && result.reply) {
           const asstMsg = {
             id: generateStableId("msg_"),
             role: "assistant",
-            content: result.response,
+            content: result.reply,
             createdAt: new Date().toISOString(),
           }
 
