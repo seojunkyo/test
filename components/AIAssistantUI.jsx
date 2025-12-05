@@ -9,7 +9,8 @@ import GhostIconButton from "./GhostIconButton"
 import ThemeToggle from "./ThemeToggle"
 import LoginModal from "./LoginModal" // Added LoginModal import
 import SearchModal from "./SearchModal" // Added SearchModal import
-import { INITIAL_CONVERSATIONS, INITIAL_TEMPLATES, INITIAL_FOLDERS } from "./mockData"
+import { fetchChatList, toggleChatPin } from "/lib/api";
+import { useAuth } from "../contexts/AuthProvider";
 
 let idCounter = 0
 const generateStableId = (prefix = "") => `${prefix}${++idCounter}`
@@ -21,37 +22,92 @@ export default function AIAssistantUI() {
   const [isLoggedIn, setIsLoggedIn] = useState(false) // Added login state management
   const [hasInitialized, setHasInitialized] = useState(false) // Added initialization flag to prevent duplicate chat creation
   const [showSearchModal, setShowSearchModal] = useState(false)
+  const { isLoggedIn, login, userInfo } = useAuth();
 
-  const [userData, setUserData] = useState({
-    username: "",
-    mail: "",
-  })
+  const userId = userInfo?.loginid;
+
+  const user = searchParams.get("username");
+  const mail = searchParams.get("mail");
+  const deptname = searchParams.get("deptname");
+  const loginid = searchParams.get("loginid");
+  const [selectedBot, setSelectedBot] = useState("GaussO4");
+
+
+  useEffect(()=>{
+    if(user && !loginProcessed.current){
+      const userData={
+        username: user,
+        mail: mail,
+        deptname: deptname,
+        loginid: loginid,
+      };
+
+      login(userData)
+        .then(async(user) => {
+          loginProcessed.current=true;
+        })
+        .catch((error)={
+          console.error(error);
+        })
+        .finally(()=>{
+            router.replace("/");
+        });
+      }    
+    }, [searchParams, router, login]);
+
+  const loadChats = useCallback(async () => {
+    if (isLoggedIn && userData?.loginid) {
+      try {
+        const chatList = await fetchChatList(userData.loginid);
+        
+        const mappedConversations = chatList.map((chat) => ({
+          id: chat.chat_id,
+          title: chat.title,
+          updatedAt: chat.updated_at,
+          pinned: chat.is_pinned,
+          messages: [], // (참고) 목록 조회 시 메시지 내용은 없으므로 빈 배열
+          messageCount: 0, 
+          preview: chat.title,
+          folder: null 
+        }));
+
+        setConversations(mappedConversations);
+        return mappedConversations;
+      } catch (error) {
+        console.error("Failed to load chats:", error);
+        return [];
+      }
+    }
+    return [];
+  }, [isLoggedIn, userId]);
 
   useEffect(() => {
     setIsClient(true)
     const saved = localStorage.getItem("theme")
-    if (saved) {
-      setTheme(saved)
-    } else if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) {
-      setTheme("dark")
-    }
+    if (saved) setTheme(saved)
+    else if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) setTheme("dark")
 
-    const loginStatus = localStorage.getItem("isLoggedIn")
-    const hasVisited = localStorage.getItem("hasVisited")
+    if (loginProcessed.current || searchParams.get('loginid')) return;
 
-    if (loginStatus === "true") {
-      setIsLoggedIn(true)
-      setShowLoginModal(false) // Don't show login modal if already logged in
-    } else {
-      setIsLoggedIn(false)
-      if (!hasVisited) {
-        setShowLoginModal(true)
-        localStorage.setItem("hasVisited", "true")
+    const init = async () => {
+      if (isLoggedIn) {
+        const chats = await loadChats();
+        // 목록이 있고 선택된 것이 없으면 첫 번째 선택
+        if (chats.length > 0 && !selectedId) {
+          setSelectedId(chats[0].id);
+        } else if (chats.length === 0) {
+          // 목록이 없어도 createNewChat()을 호출하지 않음 (빈 화면에서 시작)
+          createNewChat(); 
+        }
+        setShowLoginModal(false);
+      } else {
+        setShowLoginModal(true);
       }
-    }
+      setHasInitialized(true);
+    };
 
-    setHasInitialized(true) // Mark as initialized
-  }, [])
+    init();
+  }, [isLoggedIn, loadChats]);
 
   useEffect(() => {
     if (!isClient) return
